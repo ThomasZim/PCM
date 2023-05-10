@@ -32,6 +32,17 @@ public:
 		clear();
 	}
 
+	Path(const Path& o)
+	{
+		_graph = o._graph;
+		_nodes = new int[o.max() + 1];
+		_size = o._size;
+		_distance = o._distance;
+		for (int i=0; i<_size; i++)
+			_nodes[i] = o._nodes[i];
+	}
+
+
 	int max() const { return _graph->size(); }
 	int size() const { return _size; }
 	bool leaf() const { return (_size == max()); }
