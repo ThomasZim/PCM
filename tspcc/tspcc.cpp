@@ -7,7 +7,14 @@
 #include "graph.hpp"
 #include "path.hpp"
 #include "tspfile.hpp"
+#include <iostream>
+#include <thread>
+#include <vector>
+#include <mutex>
 
+
+// Vector of threads
+std::vector<std::thread> threads;
 
 enum Verbosity {
 	VER_NONE = 0,
@@ -149,7 +156,12 @@ int main(int argc, char* argv[])
 
 	Path* current = new Path(g);
 	current->add(0);
-	branch_and_bound(current);
+	// Create a thread and start branching
+	threads.push_back(std::thread(branch_and_bound, current));
+	// Wait for the thread to finish
+	threads[0].join();
+	
+	// branch_and_bound(current);
 
 	std::cout << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
 
