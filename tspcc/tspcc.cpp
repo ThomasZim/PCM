@@ -22,6 +22,9 @@ std::vector<Path*> paths;
 // Create a mutex
 std::mutex mtx;
 
+// Create shortest path mutex
+std::mutex shortest_mtx;
+
 enum Verbosity {
 	VER_NONE = 0,
 	VER_GRAPH = 1,
@@ -81,7 +84,9 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 			if (global.verbose & VER_SHORTER){
 				std::cout << "shorter: " << current << '\n';
 			}
+			shortest_mtx.lock();
 			global.shortest->copy(current);
+			shortest_mtx.unlock();
 			if (global.verbose & VER_COUNTERS){
 				global.counter.found ++;
 			}
@@ -129,7 +134,9 @@ static void branch_and_bound(Path* current, int depth=0)
 			if (global.verbose & VER_SHORTER){
 				std::cout << "shorter: " << current << '\n';
 			}
+			mtx.lock();
 			global.shortest->copy(current);
+			mtx.unlock();
 			if (global.verbose & VER_COUNTERS){
 				global.counter.found ++;
 			}
@@ -242,14 +249,29 @@ int main(int argc, char* argv[])
 	Path* current = new Path(g);
 	current->add(0);
 	paths.push_back(current);
-	// // Create a thread and start branching
+	// Create a thread and start branching
+	// Create 10 threads with the same function
+	// for (int i = 0; i < 1; ++i)
+	// {
+	// 	threads.push_back(std::thread(thread_work));
+	// }
+	threads.push_back(std::thread(thread_work));
 	// threads.push_back(std::thread(thread_work));
-	// // Wait for the thread to finish
-	// std::thread *t = &threads.back();
-	// t->join();
-	// threads.clear();
+	//threads.push_back(std::thread(thread_work));
 
-	thread_work();
+	// Join the threads with the main thread
+	for(auto& thread : threads){
+		thread.join();
+	}
+
+
+
+
+	// Wait for the thread to finish
+
+	threads.clear();
+
+	//thread_work();
 	
 
 	// branch_and_bound(current);
