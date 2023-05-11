@@ -25,6 +25,9 @@ std::mutex mtx;
 // Create shortest path mutex
 std::mutex shortest_mtx;
 
+// verified mutex
+std::mutex verified_mtx;
+
 enum Verbosity {
 	VER_NONE = 0,
 	VER_GRAPH = 1,
@@ -61,13 +64,14 @@ static void concurrent_branch_and_bound(Path* current, int depth);
 static void thread_work(){
 	
 	Path* current = nullptr;
-	while (paths.size() > 0){
+	while (paths.size() > 0 && global.total != global.counter.verified){
 		mtx.lock();
 		// Print the path current
 		current = paths.back();
 		paths.pop_back();
 		mtx.unlock();
 		// Cout the path current
+		//std::cout << current << '\n';
 		concurrent_branch_and_bound(current, current->size());
 	}
 	std::cout << "Bye, thread!" << "\n";
@@ -77,9 +81,12 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 	if (current->leaf()){
 		// Print the current path node with for loop
 		current->add(0);
-		if (global.verbose & VER_COUNTERS){
-			global.counter.verified ++;
-		}
+		verified_mtx.lock();
+		global.counter.verified ++;
+		verified_mtx.unlock();
+		// if (global.verbose & VER_COUNTERS){
+		// 	global.counter.verified ++;
+		// }
 		if (current->distance() < global.shortest->distance()) {
 			if (global.verbose & VER_SHORTER){
 				std::cout << "shorter: " << current << '\n';
@@ -240,6 +247,17 @@ int main(int argc, char* argv[])
 	if (global.verbose & VER_COUNTERS)
 		reset_counters(g->size());
 
+	std::cout << "Graph size :" << g->size() << '\n';
+	// Calculate the total number of paths there is 8! = 40320
+	// 12! = 479001600
+	// 9! = 362880
+	global.total = 1;
+	// Calc factorial of g->size()
+	for (int i=0; i<g->size(); i++) {
+		global.total *= (i+1);
+	}
+	std::cout << "Total number of paths: " << global.total << '\n';
+
 	global.shortest = new Path(g);
 	for (int i=0; i<g->size(); i++) {
 		global.shortest->add(i);
@@ -249,15 +267,17 @@ int main(int argc, char* argv[])
 	Path* current = new Path(g);
 	current->add(0);
 	paths.push_back(current);
+
+	// Calculate time taken to run the program
+	auto start = std::chrono::high_resolution_clock::now();
+
 	// Create a thread and start branching
 	// Create 10 threads with the same function
-	// for (int i = 0; i < 1; ++i)
-	// {
-	// 	threads.push_back(std::thread(thread_work));
-	// }
-	threads.push_back(std::thread(thread_work));
-	// threads.push_back(std::thread(thread_work));
-	//threads.push_back(std::thread(thread_work));
+	for (int i = 0; i < 2; ++i)
+	{
+		std::cout << "Creating thread " << i << '\n';
+		threads.push_back(std::thread(thread_work));
+	}
 
 	// Join the threads with the main thread
 	for(auto& thread : threads){
@@ -277,6 +297,12 @@ int main(int argc, char* argv[])
 	// branch_and_bound(current);
 
 	std::cout << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
+
+	// Calculate time taken to run the program
+	auto finish = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> elapsed = finish - start;
+	std::cout << "Time taken: " << elapsed.count() << " s\n";
+
 
 	if (global.verbose & VER_COUNTERS)
 		print_counters();
