@@ -28,6 +28,8 @@ std::mutex shortest_mtx;
 // verified mutex
 std::mutex verified_mtx;
 
+std::mutex enqueue_mtx;
+
 enum Verbosity {
 	VER_NONE = 0,
 	VER_GRAPH = 1,
@@ -113,7 +115,9 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 					// std::cout << next << "\n";
 					next->add(i);
 					// enqueue it
+					enqueue_mtx.lock();
 					paths.push_back(next);
+					enqueue_mtx.unlock();
 				}
 			}
 		} else {
@@ -141,9 +145,7 @@ static void branch_and_bound(Path* current, int depth=0)
 			if (global.verbose & VER_SHORTER){
 				std::cout << "shorter: " << current << '\n';
 			}
-			mtx.lock();
 			global.shortest->copy(current);
-			mtx.unlock();
 			if (global.verbose & VER_COUNTERS){
 				global.counter.found ++;
 			}
@@ -273,7 +275,7 @@ int main(int argc, char* argv[])
 
 	// Create a thread and start branching
 	// Create 10 threads with the same function
-	for (int i = 0; i < 2; ++i)
+	for (int i = 0; i < 10; ++i)
 	{
 		std::cout << "Creating thread " << i << '\n';
 		threads.push_back(std::thread(thread_work));
