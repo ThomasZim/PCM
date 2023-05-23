@@ -14,8 +14,8 @@ public:
 template <class T>
 class ConcurrentReuseQueue {
 private:
-    atomic_stamped<Node<T>> headref;
-    atomic_stamped<Node<T>> tailref;
+    atomic_stamped<Node<T>> headref = atomic_stamped<Node<T>>(nullptr, 0);
+    atomic_stamped<Node<T>> tailref = atomic_stamped<Node<T>>(nullptr, 0);
     thread_local static Node<T>* freelist;
 
 public:

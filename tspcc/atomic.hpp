@@ -1,3 +1,5 @@
+#ifndef ATOMIC_HPP
+#define ATOMIC_HPP
 // compiler avec:
 // g++ -o atomic atomic.cpp
 
@@ -86,3 +88,4 @@ public:
 
 // 	return 0;
 // }
+#endif /* ATOMIC_HPP */
