@@ -66,23 +66,23 @@ public:
 			
 };
 
-int main()
-{
-	std::string sa = "a";
-	atomic_stamped<std::string> ar(&sa, 10);
+// int main()
+// {
+// 	std::string sa = "a";
+// 	atomic_stamped<std::string> ar(&sa, 10);
 
-	uint64_t stamp;
-	std::string* sp = ar.get(stamp);
-	std::cout << "(start) string = " << *sp << " stamp = " << stamp << '\n';
+// 	uint64_t stamp;
+// 	std::string* sp = ar.get(stamp);
+// 	std::cout << "(start) string = " << *sp << " stamp = " << stamp << '\n';
 
-	std::string sb = "b";
-	bool c = ar.cas(&sa, &sb, 10, 12);
-	sp = ar.get(stamp);
-	std::cout << "(cas=" << c << ") string = " << *sp << " stamp = " << stamp << '\n';
+// 	std::string sb = "b";
+// 	bool c = ar.cas(&sa, &sb, 10, 12);
+// 	sp = ar.get(stamp);
+// 	std::cout << "(cas=" << c << ") string = " << *sp << " stamp = " << stamp << '\n';
 
-	c = ar.cas(&sa, &sb, 10, 12);
-	sp = ar.get(stamp);
-	std::cout << "(cas=" << c << ") string = " << *sp << " stamp = " << stamp << '\n';
+// 	c = ar.cas(&sa, &sb, 10, 12);
+// 	sp = ar.get(stamp);
+// 	std::cout << "(cas=" << c << ") string = " << *sp << " stamp = " << stamp << '\n';
 
-	return 0;
-}
+// 	return 0;
+// }

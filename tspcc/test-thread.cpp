@@ -13,5 +13,6 @@ int main(int argc, char* argv[])
 {
     std::thread t(thread_func, 1);
     t.join();
+    std::cout << "Hello, main!\n";
     return 0;
 }

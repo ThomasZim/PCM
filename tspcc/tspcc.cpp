@@ -11,6 +11,8 @@
 #include <thread>
 #include <vector>
 #include <mutex>
+#include "atomic.hpp"
+#include "ConcurrentReuseQueue.hpp"
 static const int MAX_THREAD_DEPTH = 2;
 
 // Vector of threads
@@ -61,6 +63,10 @@ static const struct {
 	.BLUE = { 27, '[', '3', '6', 'm', 0 },
 	.ORIGINAL = { 27, '[', '3', '9', 'm', 0 },
 };
+
+// Concurent list for atomic_stamped<Path*>
+
+
 static void concurrent_branch_and_bound(Path* current, int depth);
 
 static void thread_work(){
@@ -267,6 +273,17 @@ int main(int argc, char* argv[])
 	global.shortest->add(0);
 
 	Path* current = new Path(g);
+	ConcurrentReuseQueue<Path> queue;
+	queue.enqueue(current);
+
+	Path* current_temp;
+	current_temp = queue.dequeue();
+	if (current_temp==current){
+		std::cout << "same\n";
+	} else {
+		std::cout << "different\n";
+	}
+	
 	current->add(0);
 	paths.push_back(current);
 
