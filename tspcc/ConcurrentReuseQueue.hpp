@@ -82,7 +82,7 @@ public:
                 } else {
                     T* value = next->value;
                     if (headref.cas(head, next, headStamp, headStamp+1)) {
-                        // free(head);
+                        free(head);
                         return value;
                     }
                 }

@@ -19,18 +19,10 @@ static const int MAX_THREAD_DEPTH = 2;
 std::vector<std::thread> threads;
 
 // Vector of paths
-std::vector<Path*> paths;
+ConcurrentReuseQueue<Path> paths;
 
-// Create a mutex
-std::mutex mtx;
-
-// Create shortest path mutex
-std::mutex shortest_mtx;
-
-// verified mutex
-std::mutex verified_mtx;
-
-std::mutex enqueue_mtx;
+// Mutex print
+std::mutex print_mutex;
 
 enum Verbosity {
 	VER_NONE = 0,
@@ -72,41 +64,50 @@ static void concurrent_branch_and_bound(Path* current, int depth);
 static void thread_work(){
 	
 	Path* current = nullptr;
-	while (paths.size() > 0 && global.total != global.counter.verified){
-		mtx.lock();
+	while (global.total != global.counter.verified){
 		// Print the path current
-		current = paths.back();
-		paths.pop_back();
-		mtx.unlock();
+		current = paths.dequeue();
+		if (current == nullptr){
+			// Go to the beginning of the loop
+			continue;
+		}
 		// Cout the path current
 		//std::cout << current << '\n';
 		concurrent_branch_and_bound(current, current->size());
+		// print_mutex.lock();
+		// std::cout << "Global counter verified : " << global.counter.verified << "\n";
+		// print_mutex.unlock();
 	}
+	print_mutex.lock();
 	std::cout << "Bye, thread!" << "\n";
+	print_mutex.unlock();
 }
 
 static void concurrent_branch_and_bound(Path* current, int depth=0){
+	print_mutex.lock();
 	if (current->leaf()){
 		// Print the current path node with for loop
 		current->add(0);
-		verified_mtx.lock();
+
 		global.counter.verified ++;
-		verified_mtx.unlock();
-		// if (global.verbose & VER_COUNTERS){
-		// 	global.counter.verified ++;
-		// }
+		//std::cout << "verified: " << current << " depth : " << depth << " global struct :  counter : " << global.counter.verified << "\n";
+		if (global.verbose & VER_COUNTERS){
+			global.counter.verified ++;
+		}
 		if (current->distance() < global.shortest->distance()) {
 			if (global.verbose & VER_SHORTER){
-				std::cout << "shorter: " << current << '\n';
+				std::cout << "shorter: " << current << " depth : " << depth << " global struct :  counter : " << global.counter.verified << "\n";
 			}
-			shortest_mtx.lock();
 			global.shortest->copy(current);
-			shortest_mtx.unlock();
 			if (global.verbose & VER_COUNTERS){
 				global.counter.found ++;
 			}
 		}
+
 	}
+
+
+
 	else{
 		// Not a leaf
      // not yet a leaf
@@ -121,9 +122,7 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 					// std::cout << next << "\n";
 					next->add(i);
 					// enqueue it
-					enqueue_mtx.lock();
-					paths.push_back(next);
-					enqueue_mtx.unlock();
+					paths.enqueue(next);
 				}
 			}
 		} else {
@@ -135,65 +134,67 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 			}
 		}
 	}
+	print_mutex.unlock();
 }
-static void branch_and_bound(Path* current, int depth=0)
-{
-	if (global.verbose & VER_ANALYSE)
-		std::cout << "analysing " << current << '\n';
 
-	if (current->leaf()) {
-		// this is a leaf
-		current->add(0);
-		if (global.verbose & VER_COUNTERS){
-			global.counter.verified ++;
-		}
-		if (current->distance() < global.shortest->distance()) {
-			if (global.verbose & VER_SHORTER){
-				std::cout << "shorter: " << current << '\n';
-			}
-			global.shortest->copy(current);
-			if (global.verbose & VER_COUNTERS){
-				global.counter.found ++;
-			}
-		}
-		current->pop();
-	} else {
+// static void branch_and_bound(Path* current, int depth=0)
+// {
+// 	if (global.verbose & VER_ANALYSE)
+// 		std::cout << "analysing " << current << '\n';
 
-     // not yet a leaf
-    if (current->distance() < global.shortest->distance()) {
-			// continue branching
-			for (int i=1; i<current->max(); i++) {
-				if (!current->contains(i)) {
-					current->add(i);
-					std::cout << "depth: " << depth << "   Index: " << i << '\n';
-					if (depth < MAX_THREAD_DEPTH) {
-						// threads.push_back(std::thread(branch_and_bound, current, depth + 1));
+// 	if (current->leaf()) {
+// 		// this is a leaf
+// 		current->add(0);
+// 		if (global.verbose & VER_COUNTERS){
+// 			global.counter.verified ++;
+// 		}
+// 		if (current->distance() < global.shortest->distance()) {
+// 			if (global.verbose & VER_SHORTER){
+// 				std::cout << "shorter: " << current << '\n';
+// 			}
+// 			global.shortest->copy(current);
+// 			if (global.verbose & VER_COUNTERS){
+// 				global.counter.found ++;
+// 			}
+// 		}
+// 		current->pop();
+// 	} else {
 
-						// branch_and_bound(current, depth + 1);
-					} else {
-						branch_and_bound(current, depth + 1);
-					}
-					current->pop();
-				}
-			}
-			// Attente de l'achèvement des threads si nous sommes à la racine de l'arbre de recherche.
-			// if (depth == 0) {
-			// 	for (std::thread &t : threads) {
-			// 		t.join();
-			// 		std::cout << "thread joined\n";
-			// 	}
-			// 	threads.clear();
-			// }
-		} else {
-			// current already >= shortest known so far, bound
-			if (global.verbose & VER_BOUND )
-				std::cout << "bound " << current << '\n';
-			if (global.verbose & VER_COUNTERS){
-				global.counter.bound[current->size()] ++;
-			}
-		}
-	}
-}
+//      // not yet a leaf
+//     if (current->distance() < global.shortest->distance()) {
+// 			// continue branching
+// 			for (int i=1; i<current->max(); i++) {
+// 				if (!current->contains(i)) {
+// 					current->add(i);
+// 					std::cout << "depth: " << depth << "   Index: " << i << '\n';
+// 					if (depth < MAX_THREAD_DEPTH) {
+// 						// threads.push_back(std::thread(branch_and_bound, current, depth + 1));
+
+// 						// branch_and_bound(current, depth + 1);
+// 					} else {
+// 						branch_and_bound(current, depth + 1);
+// 					}
+// 					current->pop();
+// 				}
+// 			}
+// 			// Attente de l'achèvement des threads si nous sommes à la racine de l'arbre de recherche.
+// 			// if (depth == 0) {
+// 			// 	for (std::thread &t : threads) {
+// 			// 		t.join();
+// 			// 		std::cout << "thread joined\n";
+// 			// 	}
+// 			// 	threads.clear();
+// 			// }
+// 		} else {
+// 			// current already >= shortest known so far, bound
+// 			if (global.verbose & VER_BOUND )
+// 				std::cout << "bound " << current << '\n';
+// 			if (global.verbose & VER_COUNTERS){
+// 				global.counter.bound[current->size()] ++;
+// 			}
+// 		}
+// 	}
+// }
 
 
 void reset_counters(int size)
@@ -273,26 +274,15 @@ int main(int argc, char* argv[])
 	global.shortest->add(0);
 
 	Path* current = new Path(g);
-	ConcurrentReuseQueue<Path> queue;
-	queue.enqueue(current);
-
-	Path* current_temp;
-	current_temp = queue.dequeue();
-	if (current_temp==current){
-		std::cout << "same\n";
-	} else {
-		std::cout << "different\n";
-	}
-	
 	current->add(0);
-	paths.push_back(current);
+	paths.enqueue(current);
 
 	// Calculate time taken to run the program
 	auto start = std::chrono::high_resolution_clock::now();
 
 	// Create a thread and start branching
 	// Create 10 threads with the same function
-	for (int i = 0; i < 10; ++i)
+	for (int i = 0; i < 2; ++i)
 	{
 		std::cout << "Creating thread " << i << '\n';
 		threads.push_back(std::thread(thread_work));
