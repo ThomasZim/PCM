@@ -44,7 +44,6 @@ public:
 	int distance(int i, int j) const { return _distances[i + _max_size * j]; }
 	int& sdistance(int i, int j) { return _distances[i + _max_size * j]; }
 	int add(int x, int y) { _x[_size] = x; _y[_size] = y; return _size ++; }
-
 	void print(std::ostream& os) const
 	{
 		char fmt[100];

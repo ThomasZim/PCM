@@ -108,7 +108,7 @@ private:
 	}
 
 public:
-	static Graph* graph(std::string fname)
+	static Graph* graph(std::string fname, int &gsize)
 	{
 		FILE *f;
 		int size = 0;
@@ -129,7 +129,8 @@ public:
 			tline = trim_line(line);
 			_linenum ++;
 			if (!strncmp("DIMENSION", tline, 9)) {
-				size = scan_size(tline);
+				// size = scan_size(tline);
+				size = gsize;
 			} else if (!strncmp("EDGE_WEIGHT_TYPE", tline, 16)) {
 				ewt = scan_weight(tline);
 			} else if (!strncmp("NODE_COORD_SECTION", line, 18))
