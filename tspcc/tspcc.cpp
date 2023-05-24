@@ -24,9 +24,9 @@ std::vector<std::thread> threads;
 ConcurrentReuseQueue<Path> paths;
 
 // Mutex print
-std::mutex print_mutex;
+// std::mutex print_mutex;
 
-std::mutex shortest_mutex;
+// std::mutex shortest_mutex;
 
 // Number of cities
 int cities;
