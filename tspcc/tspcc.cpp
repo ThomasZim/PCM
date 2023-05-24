@@ -44,7 +44,7 @@ static struct {
 	std::atomic<Path*> shortest;
 	Verbosity verbose;
 	struct {
-		std::atomic<int> verified;	// # of paths checked
+		std::atomic_int verified;	// # of paths checked
 		int found;	// # of times a shorter path was found
 		int* bound;	// # of bound operations per level
 	} counter;
