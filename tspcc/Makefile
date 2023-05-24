@@ -1,6 +1,6 @@
 #  Copyright (c) 2012 Marcelo Pasin. All rights reserved.
 
-CFLAGS=-O3 -Wall
+CFLAGS=-O3 -Wall -mcx16
 LDFLAGS=-O3 -lm -latomic
 
 all: tspcc atomic
