@@ -1,7 +1,5 @@
-#  Copyright (c) 2012 Marcelo Pasin. All rights reserved.
-
 CFLAGS=-O3 -Wall -mcx16
-LDFLAGS=-O3 -lm -latomic
+LDFLAGS=-O3 -lm -latomic -Xlinker -latomic
 
 all: tspcc atomic
 
@@ -15,7 +13,7 @@ atomic: atomic.cpp
 	g++ -o atomic atomic.cpp -latomic -pthread -mcx16
 
 omp:
-	make tspcc CFLAGS="-fopenmp -O3" LDFLAGS="-fopenmp -O3 -latomic"
+	make tspcc CFLAGS="-fopenmp -O3" LDFLAGS="-fopenmp -O3 -latomic -Xlinker -latomic"
 
 clean:
 	rm -f *.o tspcc atomic
