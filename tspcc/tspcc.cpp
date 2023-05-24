@@ -14,6 +14,7 @@
 #include "atomic.hpp"
 #include "ConcurrentReuseQueue.hpp"
 #include <atomic>
+#include <fstream> // Ajoutez cette ligne en haut de votre fichier
 static const int MAX_THREAD_DEPTH = 2;
 
 // Vector of threads
@@ -310,6 +311,8 @@ void print_counters()
 
 int main(int argc, char* argv[])
 {
+    std::ofstream outputFile("output.csv"); // Ouvrir un nouveau fichier CSV
+    outputFile << "i_city,i_thread,elapsed_time\n"; // Écrire les en-têtes des colonnes
 	char* fname = 0;
 	int MAX_THREAD = 1;
 	int MAX_CITY = 1;
@@ -329,7 +332,7 @@ int main(int argc, char* argv[])
 		}
 	}
 	for (int i_thread=1; i_thread<MAX_THREAD+1; i_thread++) {
-		for (int i_city=3; i_city<MAX_CITY; i_city++) {	
+		for (int i_city=3; i_city<MAX_CITY+1; i_city++) {	
 			std::cout << "Thread: " << i_thread << "     City: " << i_city << '\n';
 			Graph* g = TSPFile::graph(fname, i_city);
 			if (global.verbose & VER_GRAPH)
@@ -394,12 +397,13 @@ int main(int argc, char* argv[])
 
 			// Calculate time taken to run the program
 
+		    outputFile << i_city << "," << i_thread << "," << elapsed.count() << "\n";
 
 
 			if (global.verbose & VER_COUNTERS)
 				print_counters();
 		}
 	}
-
+	outputFile.close(); // Fermer le fichier
 	return 0;
 }
