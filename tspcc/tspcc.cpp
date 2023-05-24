@@ -13,6 +13,7 @@
 #include <mutex>
 #include "atomic.hpp"
 #include "ConcurrentReuseQueue.hpp"
+#include <atomic>
 static const int MAX_THREAD_DEPTH = 2;
 
 // Vector of threads
@@ -23,6 +24,8 @@ ConcurrentReuseQueue<Path> paths;
 
 // Mutex print
 std::mutex print_mutex;
+
+std::mutex shortest_mutex;
 
 // Number of cities
 int cities;
@@ -37,10 +40,10 @@ enum Verbosity {
 };
 
 static struct {
-	Path* shortest;
+	std::atomic<Path*> shortest;
 	Verbosity verbose;
 	struct {
-		int verified;	// # of paths checked
+		std::atomic<int> verified;	// # of paths checked
 		int found;	// # of times a shorter path was found
 		int* bound;	// # of bound operations per level
 	} counter;
@@ -69,10 +72,10 @@ static void thread_work(){
 	Path* current = nullptr;
 	while (global.total != global.counter.verified){
 		// Print the path current
-		print_mutex.lock();
+		/*print_mutex.lock();
 		std::cout << "Global counter verified : " << global.counter.verified << "\n";
 		std::cout << "Global total : " << global.total << "\n";
-		print_mutex.unlock();
+		print_mutex.unlock();*/
 		current = paths.dequeue();
 		if (current == nullptr){
 			// Go to the beginning of the loop
@@ -92,10 +95,15 @@ static void thread_work(){
 
 static void concurrent_branch_and_bound(Path* current, int depth=0){
 	//print_mutex.lock();
+	//shortest_mutex.lock();
+	/*print_mutex.lock();
+	std::cout << '\n';
+	print_mutex.unlock();*/
 	if (current->leaf()){
-		print_mutex.lock();
+		
+		/*print_mutex.lock();
 		std::cout << "LEAF     depth: " << depth << "   counter: " << global.counter.verified << "     current: " << current << '\n';
-		print_mutex.unlock();
+		print_mutex.unlock();*/
 		// Print the current path node with for loop
 		current->add(0);
 
@@ -104,25 +112,28 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 		if (global.verbose & VER_COUNTERS){
 			global.counter.verified ++;
 		}
-		if (current->distance() < global.shortest->distance()) {
+		/*print_mutex.lock();
+		std::cout << "Current distance: " << current->distance() << "                     Shortest distance: " << global.shortest.load(std::memory_order_relaxed)->distance() << "\n";
+		print_mutex.unlock();*/
+		if (current->distance() < global.shortest.load(std::memory_order_relaxed)->distance()) {
 			if (global.verbose & VER_SHORTER){
-				print_mutex.lock();
+				/*print_mutex.lock();
 				std::cout << "shorter: " << current << " depth : " << depth << " global struct :  counter : " << global.counter.verified << "\n";
-				print_mutex.unlock();
+				print_mutex.unlock();*/
 			}
-			global.shortest->copy(current);
+			global.shortest.load(std::memory_order_relaxed)->copy(current);
 			if (global.verbose & VER_COUNTERS){
 				global.counter.found ++;
 			}
 		}
 	}
 	else{
-		print_mutex.lock();
+		/*print_mutex.lock();
 		std::cout << "NOT LEAF     depth: " << depth << "   counter: " << global.counter.verified << "     current: " << current << '\n';
-		print_mutex.unlock();
-			// Not a leaf
+		print_mutex.unlock();*/
+		// Not a leaf
 		// not yet a leaf
-		if (current->distance() < global.shortest->distance()) {
+		if (current->distance() < global.shortest.load(std::memory_order_relaxed)->distance()) {
 				// continue branching
 				for (int i=1; i<current->max(); i++) {
 					Path* next;
@@ -155,6 +166,7 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 				global.counter.verified += result;
 			}
 	}
+	//shortest_mutex.unlock();
 	//print_mutex.unlock();
 }
 // static void branch_and_bound(Path* current, int depth=0)
@@ -216,6 +228,49 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 // 	}
 // }
 
+/*static void branch_and_bound(Path* current)
+{
+	std::cout << '\n';
+	if (global.verbose & VER_ANALYSE)
+		std::cout << "analysing " << current << '\n';
+
+	
+	if (current->leaf()) {
+		// this is a leaf
+		current->add(0);
+		if (global.verbose & VER_COUNTERS)
+			global.counter.verified ++;
+		std::cout << "LEAF   counter: " << global.counter.verified << "     current: " << current << '\n';
+		std::cout << "Current distance: " << current->distance() << "                     Shortest distance: " << global.shortest->distance() << "\n";
+		if (current->distance() < global.shortest->distance()) {
+			if (global.verbose & VER_SHORTER)
+				std::cout << "shorter: " << current << '\n';
+			global.shortest->copy(current);
+			if (global.verbose & VER_COUNTERS)
+				global.counter.found ++;
+		}
+		current->pop();
+	} else {
+		// not yet a leaf
+		if (current->distance() < global.shortest->distance()) {
+			// continue branching
+			for (int i=1; i<current->max(); i++) {
+				if (!current->contains(i)) {
+					current->add(i);
+					branch_and_bound(current);
+					current->pop();
+				}
+			}
+		} else {
+			// current already >= shortest known so far, bound
+			if (global.verbose & VER_BOUND )
+				std::cout << "bound " << current << '\n';
+			if (global.verbose & VER_COUNTERS)
+				global.counter.bound[current->size()] ++;
+		}
+	}
+}*/
+
 
 void reset_counters(int size)
 {
@@ -276,7 +331,7 @@ int main(int argc, char* argv[])
 	if (global.verbose & VER_COUNTERS)
 		reset_counters(g->size());
 
-	std::cout << "Graph size :" << g->size() << '\n';
+	std::cout << "Graph size: " << g->size() << '\n';
 	cities = g->size();
 	// Calculate the total number of paths there is 8! = 40320
 	// 12! = 479001600
@@ -290,9 +345,9 @@ int main(int argc, char* argv[])
 
 	global.shortest = new Path(g);
 	for (int i=0; i<g->size(); i++) {
-		global.shortest->add(i);
+		global.shortest.load(std::memory_order_relaxed)->add(i);
 	}
-	global.shortest->add(0);
+	global.shortest.load(std::memory_order_relaxed)->add(0);
 
 	Path* current = new Path(g);
 	current->add(0);
@@ -303,9 +358,9 @@ int main(int argc, char* argv[])
 
 	// Create a thread and start branching
 	// Create 10 threads with the same function
-	for (int i = 0; i < 10; ++i)
+	for (int i = 0; i < 5; ++i)
 	{
-		std::cout << "Creating thread " << i << '\n';
+		//std::cout << "Creating thread " << i << '\n';
 		threads.push_back(std::thread(thread_work));
 	}
 
@@ -324,7 +379,7 @@ int main(int argc, char* argv[])
 	//thread_work();
 	
 
-	// branch_and_bound(current);
+	//branch_and_bound(current);
 
 	std::cout << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
 
