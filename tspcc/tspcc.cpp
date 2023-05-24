@@ -14,6 +14,7 @@
 #include "atomic.hpp"
 #include "ConcurrentReuseQueue.hpp"
 #include <atomic>
+#include <fstream> // Ajoutez cette ligne en haut de votre fichier
 static const int MAX_THREAD_DEPTH = 2;
 
 // Vector of threads
@@ -310,96 +311,105 @@ void print_counters()
 
 int main(int argc, char* argv[])
 {
+    std::ofstream outputFile("output.csv"); // Ouvrir un nouveau fichier CSV
+    outputFile << "i_avg,i_city,i_thread,elapsed_time\n"; // Écrire les en-têtes des colonnes
 	char* fname = 0;
 	int MAX_THREAD = 1;
+	int THREAD_INCREMENT = 1;
 	int MAX_CITY = 1;
 	int THREAD_NUMBER = 2;
 	if (argc == 2) {
 		fname = argv[1];
 		global.verbose = VER_NONE;
 	} else {
-		if (argc == 5 && argv[1][0] == '-' && argv[1][1] == 'v') {
+		if (argc == 6 && argv[1][0] == '-' && argv[1][1] == 'v') {
 			global.verbose = (Verbosity) (argv[1][2] ? atoi(argv[1]+2) : 1);
 			fname = argv[2];
 			MAX_THREAD = atoi(argv[3]);
-			MAX_CITY = atoi(argv[4]);
+			THREAD_INCREMENT = atoi(argv[4]);
+			MAX_CITY = atoi(argv[5]);
 		} else {
 			fprintf(stderr, "usage: %s [-v#] filename\n", argv[0]);
 			exit(1);
 		}
 	}
-	for (int i_thread=1; i_thread<MAX_THREAD+1; i_thread++) {
-		for (int i_city=3; i_city<MAX_CITY; i_city++) {	
-			std::cout << "Thread: " << i_thread << "     City: " << i_city << '\n';
-			Graph* g = TSPFile::graph(fname, i_city);
-			if (global.verbose & VER_GRAPH)
-				std::cout << COLOR.BLUE << g << COLOR.ORIGINAL;
+	for (int i_avg = 0; i_avg < 10; i_avg++){
+		for (int i_thread=1; i_thread<MAX_THREAD+1; i_thread+=THREAD_INCREMENT) {
+			if (i_thread == 1+THREAD_INCREMENT)
+				i_thread = THREAD_INCREMENT;
+			for (int i_city=1; i_city<MAX_CITY+1; i_city++) {	
+				std::cout << "Thread: " << i_thread << "     City: " << i_city << '\n';
+				Graph* g = TSPFile::graph(fname, i_city);
+				if (global.verbose & VER_GRAPH)
+					std::cout << COLOR.BLUE << g << COLOR.ORIGINAL;
 
-			reset_counters(g->size());
+				reset_counters(g->size());
 
-			std::cout << "Graph size: " << g->size() << '\n';
-			cities = g->size();
-			// Calculate the total number of paths there is 8! = 40320
-			// 12! = 479001600
-			// 9! = 362880
-			global.total = 1;
-			// Calc factorial of g->size()
-			for (int i=1; i<g->size(); i++) {
-				global.total *= (i);
+				std::cout << "Graph size: " << g->size() << '\n';
+				cities = g->size();
+				// Calculate the total number of paths there is 8! = 40320
+				// 12! = 479001600
+				// 9! = 362880
+				global.total = 1;
+				// Calc factorial of g->size()
+				for (int i=1; i<g->size(); i++) {
+					global.total *= (i);
+				}
+				std::cout << "Total number of paths: " << global.total << '\n';
+
+				global.shortest = new Path(g);
+				for (int i=0; i<g->size(); i++) {
+					global.shortest.load(std::memory_order_relaxed)->add(i);
+				}
+				global.shortest.load(std::memory_order_relaxed)->add(0);
+
+				Path* current = new Path(g);
+				current->add(0);
+				paths.enqueue(current);
+
+				// Calculate time taken to run the program
+				auto start = std::chrono::high_resolution_clock::now();
+
+				// Create a thread and start branching
+				// Create 10 threads with the same function
+				for (int i = 0; i < i_thread; ++i)
+				{
+					//std::cout << "Creating thread " << i << '\n';
+					threads.push_back(std::thread(thread_work));
+				}
+
+				// Join the threads with the main thread
+				for(auto& thread : threads){
+					thread.join();
+				}
+
+				auto finish = std::chrono::high_resolution_clock::now();
+
+
+				// Wait for the thread to finish
+
+				threads.clear();
+
+				//thread_work();
+				
+
+				//branch_and_bound(current);
+
+				std::cout << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
+
+				std::chrono::duration<double> elapsed = finish - start;
+				std::cout << "Time taken: " << elapsed.count() << " s\n";
+
+				// Calculate time taken to run the program
+
+				outputFile << i_avg << "," << i_city << "," << i_thread << "," << elapsed.count() << "\n";
+
+
+				if (global.verbose & VER_COUNTERS)
+					print_counters();
 			}
-			std::cout << "Total number of paths: " << global.total << '\n';
-
-			global.shortest = new Path(g);
-			for (int i=0; i<g->size(); i++) {
-				global.shortest.load(std::memory_order_relaxed)->add(i);
-			}
-			global.shortest.load(std::memory_order_relaxed)->add(0);
-
-			Path* current = new Path(g);
-			current->add(0);
-			paths.enqueue(current);
-
-			// Calculate time taken to run the program
-			auto start = std::chrono::high_resolution_clock::now();
-
-			// Create a thread and start branching
-			// Create 10 threads with the same function
-			for (int i = 0; i < i_thread; ++i)
-			{
-				//std::cout << "Creating thread " << i << '\n';
-				threads.push_back(std::thread(thread_work));
-			}
-
-			// Join the threads with the main thread
-			for(auto& thread : threads){
-				thread.join();
-			}
-
-			auto finish = std::chrono::high_resolution_clock::now();
-
-
-			// Wait for the thread to finish
-
-			threads.clear();
-
-			//thread_work();
-			
-
-			//branch_and_bound(current);
-
-			std::cout << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
-
-			std::chrono::duration<double> elapsed = finish - start;
-			std::cout << "Time taken: " << elapsed.count() << " s\n";
-
-			// Calculate time taken to run the program
-
-
-
-			if (global.verbose & VER_COUNTERS)
-				print_counters();
 		}
 	}
-
+	outputFile.close(); // Fermer le fichier
 	return 0;
 }
