@@ -313,6 +313,7 @@ int main(int argc, char* argv[])
 {
     std::ofstream outputFile("output.csv"); // Ouvrir un nouveau fichier CSV
     outputFile << "i_avg,i_city,i_thread,elapsed_time\n"; // Écrire les en-têtes des colonnes
+	outputFile.close(); // Fermer le fichier
 	char* fname = 0;
 	int MAX_THREAD = 1;
 	int THREAD_INCREMENT = 1;
@@ -338,6 +339,9 @@ int main(int argc, char* argv[])
 			if (i_thread == 1+THREAD_INCREMENT)
 				i_thread = THREAD_INCREMENT;
 			for (int i_city=1; i_city<MAX_CITY+1; i_city++) {	
+				// Open outputFile to the end of the file
+				outputFile.open("output.csv", std::ios_base::app);
+				
 				std::cout << "Thread: " << i_thread << "     City: " << i_city << '\n';
 				Graph* g = TSPFile::graph(fname, i_city);
 				if (global.verbose & VER_GRAPH)
@@ -403,6 +407,7 @@ int main(int argc, char* argv[])
 				// Calculate time taken to run the program
 
 				outputFile << i_avg << "," << i_city << "," << i_thread << "," << elapsed.count() << "\n";
+				outputFile.close(); // Fermer le fichier
 
 
 				if (global.verbose & VER_COUNTERS)
