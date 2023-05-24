@@ -1,5 +1,6 @@
 CFLAGS=-O3 -Wall -mcx16
 LDFLAGS=-O3 -lm -latomic -Xlinker -latomic
+DCMAKE_CXX_FLAGS=-latomic
 
 all: tspcc atomic
 
