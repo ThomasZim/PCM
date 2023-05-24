@@ -24,6 +24,9 @@ ConcurrentReuseQueue<Path> paths;
 // Mutex print
 std::mutex print_mutex;
 
+// Number of cities
+int cities;
+
 enum Verbosity {
 	VER_NONE = 0,
 	VER_GRAPH = 1,
@@ -66,6 +69,10 @@ static void thread_work(){
 	Path* current = nullptr;
 	while (global.total != global.counter.verified){
 		// Print the path current
+		print_mutex.lock();
+		std::cout << "Global counter verified : " << global.counter.verified << "\n";
+		std::cout << "Global total : " << global.total << "\n";
+		print_mutex.unlock();
 		current = paths.dequeue();
 		if (current == nullptr){
 			// Go to the beginning of the loop
@@ -78,14 +85,17 @@ static void thread_work(){
 		// std::cout << "Global counter verified : " << global.counter.verified << "\n";
 		// print_mutex.unlock();
 	}
-	print_mutex.lock();
+	/*print_mutex.lock();
 	std::cout << "Bye, thread!" << "\n";
-	print_mutex.unlock();
+	print_mutex.unlock();*/
 }
 
 static void concurrent_branch_and_bound(Path* current, int depth=0){
-	print_mutex.lock();
+	//print_mutex.lock();
 	if (current->leaf()){
+		print_mutex.lock();
+		std::cout << "LEAF     depth: " << depth << "   counter: " << global.counter.verified << "     current: " << current << '\n';
+		print_mutex.unlock();
 		// Print the current path node with for loop
 		current->add(0);
 
@@ -96,47 +106,57 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 		}
 		if (current->distance() < global.shortest->distance()) {
 			if (global.verbose & VER_SHORTER){
+				print_mutex.lock();
 				std::cout << "shorter: " << current << " depth : " << depth << " global struct :  counter : " << global.counter.verified << "\n";
+				print_mutex.unlock();
 			}
 			global.shortest->copy(current);
 			if (global.verbose & VER_COUNTERS){
 				global.counter.found ++;
 			}
 		}
-
 	}
-
-
-
 	else{
-		// Not a leaf
-     // not yet a leaf
-    if (current->distance() < global.shortest->distance()) {
-			// continue branching
-			for (int i=1; i<current->max(); i++) {
-				Path* next;
-				if (!current->contains(i)) {
-					// create a new path
-					next = new Path(*current);
-					// Cout the path next
-					// std::cout << next << "\n";
-					next->add(i);
-					// enqueue it
-					paths.enqueue(next);
+		print_mutex.lock();
+		std::cout << "NOT LEAF     depth: " << depth << "   counter: " << global.counter.verified << "     current: " << current << '\n';
+		print_mutex.unlock();
+			// Not a leaf
+		// not yet a leaf
+		if (current->distance() < global.shortest->distance()) {
+				// continue branching
+				for (int i=1; i<current->max(); i++) {
+					Path* next;
+					if (!current->contains(i)) {
+						// create a new path
+						next = new Path(*current);
+						// Cout the path next
+						// std::cout << next << "\n";
+						next->add(i);
+						// enqueue it
+						paths.enqueue(next);
+					}
 				}
-			}
-		} else {
-			// current already >= shortest known so far, bound
-			if (global.verbose & VER_BOUND )
-				std::cout << "bound " << current << '\n';
-			if (global.verbose & VER_COUNTERS){
-				global.counter.bound[current->size()] ++;
-			}
-		}
-	}
-	print_mutex.unlock();
-}
+			} else {
+				// current already >= shortest known so far, bound
+				if (global.verbose & VER_BOUND )
+					std::cout << "bound " << current << '\n';
+				if (global.verbose & VER_COUNTERS){
+					global.counter.bound[current->size()] ++;
+				}
 
+				// Calculate the number of paths that killed
+				int temp = (cities - current->size());
+
+				int result = 1;
+		
+				for (int i = 1; i <= temp; ++i) {
+					result *= i;
+				}	
+				global.counter.verified += result;
+			}
+	}
+	//print_mutex.unlock();
+}
 // static void branch_and_bound(Path* current, int depth=0)
 // {
 // 	if (global.verbose & VER_ANALYSE)
@@ -257,13 +277,14 @@ int main(int argc, char* argv[])
 		reset_counters(g->size());
 
 	std::cout << "Graph size :" << g->size() << '\n';
+	cities = g->size();
 	// Calculate the total number of paths there is 8! = 40320
 	// 12! = 479001600
 	// 9! = 362880
 	global.total = 1;
 	// Calc factorial of g->size()
-	for (int i=0; i<g->size(); i++) {
-		global.total *= (i+1);
+	for (int i=1; i<g->size(); i++) {
+		global.total *= (i);
 	}
 	std::cout << "Total number of paths: " << global.total << '\n';
 
@@ -282,7 +303,7 @@ int main(int argc, char* argv[])
 
 	// Create a thread and start branching
 	// Create 10 threads with the same function
-	for (int i = 0; i < 2; ++i)
+	for (int i = 0; i < 10; ++i)
 	{
 		std::cout << "Creating thread " << i << '\n';
 		threads.push_back(std::thread(thread_work));
