@@ -13,6 +13,8 @@
 #include <mutex>
 #include "atomic.hpp"
 #include "ConcurrentReuseQueue.hpp"
+#include "SynchronizedPath.hpp"
+#include <atomic>
 static const int MAX_THREAD_DEPTH = 2;
 
 // Vector of threads
@@ -37,16 +39,16 @@ enum Verbosity {
 };
 
 static struct {
-	Path* shortest;
+	SynchronizedPath* shortest;
 	Verbosity verbose;
 	struct {
-		int verified;	// # of paths checked
-		int found;	// # of times a shorter path was found
-		int* bound;	// # of bound operations per level
+		std::atomic_int verified;	// # of paths checked
+		std::atomic_int found;	// # of times a shorter path was found
+		std::atomic_int* bound;	// # of bound operations per level
 	} counter;
-	int size;
-	int total;		// number of paths to check
-	int* fact;
+	std::atomic_int size;
+	std::atomic_int total;		// number of paths to check
+	std::atomic_int* fact;
 } global;
 
 static const struct {
@@ -110,7 +112,7 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 				std::cout << "shorter: " << current << " depth : " << depth << " global struct :  counter : " << global.counter.verified << "\n";
 				print_mutex.unlock();
 			}
-			global.shortest->copy(current);
+			global.shortest->compareAndUpdate(current);
 			if (global.verbose & VER_COUNTERS){
 				global.counter.found ++;
 			}
@@ -222,8 +224,8 @@ void reset_counters(int size)
 	global.size = size;
 	global.counter.verified = 0;
 	global.counter.found = 0;
-	global.counter.bound = new int[global.size];
-	global.fact = new int[global.size];
+	global.counter.bound = new std::atomic_int[global.size];
+	global.fact = new std::atomic_int[global.size];
 	for (int i=0; i<global.size; i++) {
 		global.counter.bound[i] = 0;
 		if (i) {
@@ -231,7 +233,7 @@ void reset_counters(int size)
 			global.fact[pos] = (i-1) ? (i * global.fact[pos+1]) : 1;
 		}
 	}
-	global.total = global.fact[0] = global.fact[1];
+	global.total.store(global.fact[0].load());
 }
 
 void print_counters()
@@ -284,11 +286,15 @@ int main(int argc, char* argv[])
 	global.total = 1;
 	// Calc factorial of g->size()
 	for (int i=1; i<g->size(); i++) {
-		global.total *= (i);
+		int expected = global.total.load();
+		while (!global.total.compare_exchange_weak(expected, expected*i))
+		{
+			expected = global.total.load();
+		}
 	}
 	std::cout << "Total number of paths: " << global.total << '\n';
 
-	global.shortest = new Path(g);
+	global.shortest = new SynchronizedPath(g);
 	for (int i=0; i<g->size(); i++) {
 		global.shortest->add(i);
 	}
