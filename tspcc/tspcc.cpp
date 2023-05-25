@@ -319,22 +319,24 @@ int main(int argc, char* argv[])
 	int THREAD_INCREMENT = 1;
 	int MAX_CITY = 1;
 	int THREAD_NUMBER = 2;
+	int AVG = 1;
 	if (argc == 2) {
 		fname = argv[1];
 		global.verbose = VER_NONE;
 	} else {
-		if (argc == 6 && argv[1][0] == '-' && argv[1][1] == 'v') {
+		if (argc == 7 && argv[1][0] == '-' && argv[1][1] == 'v') {
 			global.verbose = (Verbosity) (argv[1][2] ? atoi(argv[1]+2) : 1);
 			fname = argv[2];
 			MAX_THREAD = atoi(argv[3]);
 			THREAD_INCREMENT = atoi(argv[4]);
 			MAX_CITY = atoi(argv[5]);
+			AVG = atoi(argv[6]);
 		} else {
 			fprintf(stderr, "usage: %s [-v#] filename\n", argv[0]);
 			exit(1);
 		}
 	}
-	for (int i_avg = 0; i_avg < 10; i_avg++){
+	for (int i_avg = 0; i_avg < AVG; i_avg++){
 		for (int i_thread=1; i_thread<MAX_THREAD+1; i_thread+=THREAD_INCREMENT) {
 			if (i_thread == 1+THREAD_INCREMENT)
 				i_thread = THREAD_INCREMENT;
