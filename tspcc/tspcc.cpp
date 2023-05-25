@@ -316,6 +316,7 @@ int main(int argc, char* argv[])
 	outputFile.close(); // Fermer le fichier
 	char* fname = 0;
 	int MAX_THREAD = 1;
+	int MIN_THREAD = 1;
 	int THREAD_INCREMENT = 1;
 	int MAX_CITY = 1;
 	int THREAD_NUMBER = 2;
@@ -324,23 +325,25 @@ int main(int argc, char* argv[])
 		fname = argv[1];
 		global.verbose = VER_NONE;
 	} else {
-		if (argc == 7 && argv[1][0] == '-' && argv[1][1] == 'v') {
+		if (argc == 8 && argv[1][0] == '-' && argv[1][1] == 'v') {
 			global.verbose = (Verbosity) (argv[1][2] ? atoi(argv[1]+2) : 1);
 			fname = argv[2];
-			MAX_THREAD = atoi(argv[3]);
-			THREAD_INCREMENT = atoi(argv[4]);
-			MAX_CITY = atoi(argv[5]);
-			AVG = atoi(argv[6]);
+			MIN_THREAD = atoi(argv[3]);
+			MAX_THREAD = atoi(argv[4]);
+			THREAD_INCREMENT = atoi(argv[5]);
+			MAX_CITY = atoi(argv[6]);
+			AVG = atoi(argv[7]);
 		} else {
 			fprintf(stderr, "usage: %s [-v#] filename\n", argv[0]);
 			exit(1);
 		}
 	}
 	for (int i_avg = 0; i_avg < AVG; i_avg++){
-		for (int i_thread=1; i_thread<MAX_THREAD+1; i_thread+=THREAD_INCREMENT) {
-			if (i_thread == 1+THREAD_INCREMENT)
-				i_thread = THREAD_INCREMENT;
-			for (int i_city=1; i_city<MAX_CITY+1; i_city++) {	
+		for (int i_city=1; i_city<MAX_CITY+1; i_city++) {
+			for (int i_thread=MIN_THREAD; i_thread<MAX_THREAD+1; i_thread+=THREAD_INCREMENT) {
+				if (i_thread == 1+THREAD_INCREMENT)
+					i_thread = THREAD_INCREMENT;
+	
 				// Open outputFile to the end of the file
 				outputFile.open("output.csv", std::ios_base::app);
 				
