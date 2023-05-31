@@ -65,6 +65,8 @@ static const struct {
 
 // Concurent list for atomic_stamped<Path*>
 
+// ARRAY who contains factrorial (lookup table)
+int fact[13] = {1,1,2,6,24,120,720,5040,40320,362880,3628800,39916800, 479001600};
 
 static void concurrent_branch_and_bound(Path* current, int depth);
 
@@ -86,7 +88,7 @@ static void thread_work(){
 		//std::cout << current << '\n';
 		concurrent_branch_and_bound(current, current->size());
 		// print_mutex.lock();
-		// std::cout << "Global counter verified : " << global.counter.verified << "\n";
+		//std::cout << "Global counter verified : " << global.counter.verified << "\n";
 		// print_mutex.unlock();
 	}
 	/*print_mutex.lock();
@@ -172,10 +174,13 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 				int temp = (cities - current->size());
 
 				int result = 1;
-		
-				for (int i = 1; i <= temp; ++i) {
-					result *= i;
-				}	
+				// BAD
+				// for (int i = 1; i <= temp; ++i) {
+				// 	result *= i;
+				// }	
+
+				// GOOD
+				result = fact[temp];
 				global.counter.verified += result;
 			}
 	}
