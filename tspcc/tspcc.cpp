@@ -69,9 +69,9 @@ static const struct {
 // ARRAY who contains factrorial (lookup table)
 int fact[13] = {1,1,2,6,24,120,720,5040,40320,362880,3628800,39916800, 479001600};
 
-static void concurrent_branch_and_bound(Path* current, int depth);
+int concurrent_branch_and_bound(Path* current, int depth);
 
-static void thread_work(){
+void thread_work(){
 	
 	Path* current = nullptr;
 	while (global.total != global.counter.verified){
@@ -97,7 +97,8 @@ static void thread_work(){
 	print_mutex.unlock();*/
 }
 
-static void concurrent_branch_and_bound(Path* current, int depth=0){
+int concurrent_branch_and_bound(Path* current, int depth=0){
+	int localCounter = 0; // Local counter
 	// std::cout << "depth : " << depth << "\n";
 	//print_mutex.lock();
 	//shortest_mutex.lock();
@@ -105,17 +106,16 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 	std::cout << '\n';
 	print_mutex.unlock();*/
 	if (current->leaf()){
-		
 		/*print_mutex.lock();
 		std::cout << "LEAF     depth: " << depth << "   counter: " << global.counter.verified << "     current: " << current << '\n';
 		print_mutex.unlock();*/
 		// Print the current path node with for loop
 		current->add(0);
 
-		global.counter.verified ++;
+		// global.counter.verified ++;
 		//std::cout << "verified: " << current << " depth : " << depth << " global struct :  counter : " << global.counter.verified << "\n";
 		if (global.verbose & VER_COUNTERS){
-			global.counter.verified ++;
+			// global.counter.verified ++;
 		}
 		/*print_mutex.lock();
 		std::cout << "Current distance: " << current->distance() << "                     Shortest distance: " << global.shortest.load(std::memory_order_relaxed)->distance() << "\n";
@@ -132,6 +132,8 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 			}
 		}
 		current->pop();
+		localCounter ++;
+
 	}
 	else{
 		/*print_mutex.lock();
@@ -161,6 +163,7 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 						if (!current->contains(i)) {
 							current->add(i);
 							concurrent_branch_and_bound(current, current->size());
+							//std::cout << "toadd : " << toadd << "\n";
 							// Remove last printed char
 							//
 							// std::cout << "\b";
@@ -189,11 +192,13 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 
 				// GOOD
 				result = fact[temp];
-				global.counter.verified += result;
+				// global.counter.verified += result;
+				localCounter += result;
 			}
 	}
 	//shortest_mutex.unlock();
 	//print_mutex.unlock();
+	global.counter.verified += localCounter; // update the global counter with local counter
 }
 // static void branch_and_bound(Path* current, int depth=0)
 // {
