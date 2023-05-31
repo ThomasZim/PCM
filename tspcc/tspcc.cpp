@@ -69,7 +69,7 @@ static const struct {
 // ARRAY who contains factrorial (lookup table)
 int fact[13] = {1,1,2,6,24,120,720,5040,40320,362880,3628800,39916800, 479001600};
 
-int concurrent_branch_and_bound(Path* current, int depth);
+static int concurrent_branch_and_bound(Path* current, int depth, int localCounter);
 
 void thread_work(){
 	
@@ -87,7 +87,9 @@ void thread_work(){
 		}
 		// Cout the path current
 		//std::cout << current << '\n';
-		concurrent_branch_and_bound(current, current->size());
+		global.counter.verified.fetch_add(concurrent_branch_and_bound(current, current->size(), 0), std::memory_order_relaxed);
+
+		//std::cout << "Global counter verified : " << global.counter.verified << "\n";
 		// print_mutex.lock();
 		//std::cout << "Global counter verified : " << global.counter.verified << "\n";
 		// print_mutex.unlock();
@@ -97,109 +99,67 @@ void thread_work(){
 	print_mutex.unlock();*/
 }
 
-int concurrent_branch_and_bound(Path* current, int depth=0){
-	int localCounter = 0; // Local counter
-	// std::cout << "depth : " << depth << "\n";
-	//print_mutex.lock();
-	//shortest_mutex.lock();
-	/*print_mutex.lock();
-	std::cout << '\n';
-	print_mutex.unlock();*/
-	if (current->leaf()){
-		/*print_mutex.lock();
-		std::cout << "LEAF     depth: " << depth << "   counter: " << global.counter.verified << "     current: " << current << '\n';
-		print_mutex.unlock();*/
-		// Print the current path node with for loop
-		current->add(0);
+static int concurrent_branch_and_bound(Path* current, int depth=0, int localCounter=0) {
 
-		// global.counter.verified ++;
-		//std::cout << "verified: " << current << " depth : " << depth << " global struct :  counter : " << global.counter.verified << "\n";
-		if (global.verbose & VER_COUNTERS){
-			// global.counter.verified ++;
-		}
-		/*print_mutex.lock();
-		std::cout << "Current distance: " << current->distance() << "                     Shortest distance: " << global.shortest.load(std::memory_order_relaxed)->distance() << "\n";
-		print_mutex.unlock();*/
-		if (current->distance() < global.shortest.load(std::memory_order_relaxed)->distance()) {
-			if (global.verbose & VER_SHORTER){
-				/*print_mutex.lock();
-				std::cout << "shorter: " << current << " depth : " << depth << " global struct :  counter : " << global.counter.verified << "\n";
-				print_mutex.unlock();*/
-			}
-			global.shortest.load(std::memory_order_relaxed)->copy(current);
-			if (global.verbose & VER_COUNTERS){
-				global.counter.found ++;
-			}
-		}
-		current->pop();
-		localCounter ++;
+    if (current->leaf()){
+        current->add(0);
+        if (global.verbose & VER_COUNTERS){
+            localCounter++;
+        }
+        if (current->distance() < global.shortest.load(std::memory_order_relaxed)->distance()) {
+            if (global.verbose & VER_SHORTER){
+            }
+            global.shortest.load(std::memory_order_relaxed)->copy(current);
+            if (global.verbose & VER_COUNTERS){
+                global.counter.found++;
+            }
+        }
+        current->pop();
+		return 1;
+    }
+    else {
+        if (current->distance() < global.shortest.load(std::memory_order_relaxed)->distance()) {
+            if (depth < cities-8 && i_thread!=1){
+                for (int i=1; i<current->max(); i++) {
+                    Path* next;
+                    if (!current->contains(i)) {
+                        next = new Path(*current);
+                        next->add(i);
+                        paths.enqueue(next);
+                    }
+                }
 
-	}
-	else{
-		/*print_mutex.lock();
-		std::cout << "NOT LEAF     depth: " << depth << "   counter: " << global.counter.verified << "     current: " << current << '\n';
-		print_mutex.unlock();*/
-		// Not a leaf
-		// not yet a leaf
-		if (current->distance() < global.shortest.load(std::memory_order_relaxed)->distance()) {
-				// continue branching
-				if (depth < cities-8 && i_thread!=1){
-
-					for (int i=1; i<current->max(); i++) {
-						Path* next;
-						if (!current->contains(i)) {
-							// create a new path
-							next = new Path(*current);
-							// Cout the path next
-							// std::cout << next << "\n";
-							next->add(i);
-							// enqueue it
-							paths.enqueue(next);
-						}
-					}
-				}
-				else{
-					for (int i=1; i<current->max(); i++) {
-						if (!current->contains(i)) {
-							current->add(i);
-							concurrent_branch_and_bound(current, current->size());
-							//std::cout << "toadd : " << toadd << "\n";
-							// Remove last printed char
-							//
-							// std::cout << "\b";
-							// std::cout << ".";
-							current->pop();
-							// Si le chemin
-						}
-					}
-				}
-			} else {
-				// current already >= shortest known so far, bound
-				if (global.verbose & VER_BOUND )
-					std::cout << "bound " << current << '\n';
-				if (global.verbose & VER_COUNTERS){
-					global.counter.bound[current->size()] ++;
-				}
-
-				// Calculate the number of paths that killed
-				int temp = (cities - current->size());
-
-				int result = 1;
-				// BAD
-				// for (int i = 1; i <= temp; ++i) {
-				// 	result *= i;
-				// }	
-
-				// GOOD
-				result = fact[temp];
-				// global.counter.verified += result;
-				localCounter += result;
-			}
-	}
-	//shortest_mutex.unlock();
-	//print_mutex.unlock();
-	global.counter.verified += localCounter; // update the global counter with local counter
+            }
+            else {
+                for (int i=1; i<current->max(); i++) {
+                    if (!current->contains(i)) {
+                        current->add(i);
+                        localCounter += concurrent_branch_and_bound(current, current->size(), 0);
+                        current->pop();
+                    }
+                }
+				
+            }
+			return localCounter;
+        }
+        else {
+            if (global.verbose & VER_BOUND ) {}
+            if (global.verbose & VER_COUNTERS){
+                global.counter.bound[current->size()] ++;
+            }
+            int temp = (cities - current->size());
+            int result = fact[temp];
+            localCounter += result;
+			return localCounter;
+        }
+    }
+    // global.counter.verified += localCounter;
 }
+
+
+
+
+
 // static void branch_and_bound(Path* current, int depth=0)
 // {
 // 	if (global.verbose & VER_ANALYSE)
