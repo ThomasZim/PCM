@@ -97,6 +97,7 @@ static void thread_work(){
 }
 
 static void concurrent_branch_and_bound(Path* current, int depth=0){
+	std::cout << "depth : " << depth << "\n";
 	//print_mutex.lock();
 	//shortest_mutex.lock();
 	/*print_mutex.lock();
@@ -158,7 +159,7 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 					for (int i=1; i<current->max(); i++) {
 						if (!current->contains(i)) {
 							current->add(i);
-							concurrent_branch_and_bound(current, depth + 1);
+							concurrent_branch_and_bound(current, current->size());
 							// Remove last printed char
 							//
 							// std::cout << "\b";
