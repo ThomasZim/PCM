@@ -97,7 +97,7 @@ static void thread_work(){
 }
 
 static void concurrent_branch_and_bound(Path* current, int depth=0){
-	std::cout << "depth : " << depth << "\n";
+	// std::cout << "depth : " << depth << "\n";
 	//print_mutex.lock();
 	//shortest_mutex.lock();
 	/*print_mutex.lock();
