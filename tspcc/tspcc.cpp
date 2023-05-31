@@ -30,6 +30,7 @@ ConcurrentReuseQueue<Path> paths;
 
 // Number of cities
 int cities;
+int i_thread;
 
 enum Verbosity {
 	VER_NONE = 0,
@@ -140,7 +141,7 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 		// not yet a leaf
 		if (current->distance() < global.shortest.load(std::memory_order_relaxed)->distance()) {
 				// continue branching
-				if (depth < cities-8){
+				if (depth < cities-8 && i_thread!=1){
 
 					for (int i=1; i<current->max(); i++) {
 						Path* next;
@@ -367,7 +368,7 @@ int main(int argc, char* argv[])
 	}
 	for (int i_avg = 0; i_avg < AVG; i_avg++){
 		for (int i_city=MIN_CITY; i_city<MAX_CITY+1; i_city++) {
-			for (int i_thread=MIN_THREAD; i_thread<MAX_THREAD+1; i_thread+=THREAD_INCREMENT) {
+			for (i_thread=MIN_THREAD; i_thread<MAX_THREAD+1; i_thread+=THREAD_INCREMENT) {
 				if (i_thread == 1+THREAD_INCREMENT)
 					i_thread = THREAD_INCREMENT;
 	
