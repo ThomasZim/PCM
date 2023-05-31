@@ -136,16 +136,28 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 		// not yet a leaf
 		if (current->distance() < global.shortest.load(std::memory_order_relaxed)->distance()) {
 				// continue branching
-				for (int i=1; i<current->max(); i++) {
-					Path* next;
-					if (!current->contains(i)) {
-						// create a new path
-						next = new Path(*current);
-						// Cout the path next
-						// std::cout << next << "\n";
-						next->add(i);
-						// enqueue it
-						paths.enqueue(next);
+				if (depth < 8){
+
+					for (int i=1; i<current->max(); i++) {
+						Path* next;
+						if (!current->contains(i)) {
+							// create a new path
+							next = new Path(*current);
+							// Cout the path next
+							// std::cout << next << "\n";
+							next->add(i);
+							// enqueue it
+							paths.enqueue(next);
+						}
+					}
+				}
+				else{
+					for (int i=1; i<current->max(); i++) {
+						if (!current->contains(i)) {
+							current->add(i);
+							concurrent_branch_and_bound(current, depth + 1);
+							current->pop();
+						}
 					}
 				}
 			} else {
