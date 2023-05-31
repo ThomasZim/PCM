@@ -139,7 +139,7 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 		// not yet a leaf
 		if (current->distance() < global.shortest.load(std::memory_order_relaxed)->distance()) {
 				// continue branching
-				if (depth < 8 || true){
+				if (depth < 8){
 
 					for (int i=1; i<current->max(); i++) {
 						Path* next;
