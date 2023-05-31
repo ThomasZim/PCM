@@ -138,7 +138,7 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 		// not yet a leaf
 		if (current->distance() < global.shortest.load(std::memory_order_relaxed)->distance()) {
 				// continue branching
-				if (depth < 8){
+				if (depth < 8 || true){
 
 					for (int i=1; i<current->max(); i++) {
 						Path* next;
@@ -158,7 +158,16 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 						if (!current->contains(i)) {
 							current->add(i);
 							concurrent_branch_and_bound(current, depth + 1);
+							// Remove last printed char
+							//
+							//Si le chemin est complet on fait un deuxieme pop
+							if (current->size() == cities){
+								current->pop();
+							}
+							std::cout << "\b";
+							std::cout << ".";
 							current->pop();
+							// Si le chemin
 						}
 					}
 				}
