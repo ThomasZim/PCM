@@ -129,6 +129,7 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 				global.counter.found ++;
 			}
 		}
+		current->pop();
 	}
 	else{
 		/*print_mutex.lock();
@@ -160,12 +161,8 @@ static void concurrent_branch_and_bound(Path* current, int depth=0){
 							concurrent_branch_and_bound(current, depth + 1);
 							// Remove last printed char
 							//
-							//Si le chemin est complet on fait un deuxieme pop
-							if (current->size() == cities){
-								current->pop();
-							}
-							std::cout << "\b";
-							std::cout << ".";
+							// std::cout << "\b";
+							// std::cout << ".";
 							current->pop();
 							// Si le chemin
 						}
