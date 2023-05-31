@@ -45,12 +45,12 @@ static struct {
 	std::atomic<Path*> shortest;
 	Verbosity verbose;
 	struct {
-		std::atomic_int verified;	// # of paths checked
+		std::atomic<uint64_t> verified;	// # of paths checked
 		int found;	// # of times a shorter path was found
 		int* bound;	// # of bound operations per level
 	} counter;
 	int size;
-	int total;		// number of paths to check
+	uint64_t total;		// number of paths to check
 	int* fact;
 } global;
 
@@ -67,9 +67,9 @@ static const struct {
 // Concurent list for atomic_stamped<Path*>
 
 // ARRAY who contains factrorial (lookup table)
-int fact[13] = {1,1,2,6,24,120,720,5040,40320,362880,3628800,39916800, 479001600};
+uint64_t fact[15] = {1,1,2,6,24,120,720,5040,40320,362880,3628800,39916800, 479001600, 6227020800, 87178291200};
 
-static int concurrent_branch_and_bound(Path* current, int depth, int localCounter);
+static int concurrent_branch_and_bound(Path* current, int depth, uint64_t localCounter);
 
 void thread_work(){
 	
@@ -99,7 +99,7 @@ void thread_work(){
 	print_mutex.unlock();*/
 }
 
-static int concurrent_branch_and_bound(Path* current, int depth=0, int localCounter=0) {
+static int concurrent_branch_and_bound(Path* current, int depth=0, uint64_t localCounter=0) {
 
     if (current->leaf()){
         current->add(0);
