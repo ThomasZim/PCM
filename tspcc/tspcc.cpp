@@ -305,7 +305,7 @@ void print_counters()
 int main(int argc, char* argv[])
 {
     std::ofstream outputFile("output.csv"); // Ouvrir un nouveau fichier CSV
-    outputFile << "i_avg,i_city,i_thread,elapsed_time\n"; // Écrire les en-têtes des colonnes
+    outputFile << "i_avg,i_city,i_thread,elapsed_time,cutoff\n"; // Écrire les en-têtes des colonnes
 	outputFile.close(); // Fermer le fichier
 	char* fname = 0;
 	int MAX_THREAD = 1;
@@ -413,7 +413,7 @@ int main(int argc, char* argv[])
 
 					// Calculate time taken to run the program
 
-					outputFile << i_avg << "," << i_city << "," << i_thread << "," << elapsed.count() << "\n";
+					outputFile << i_avg << "," << i_city << "," << i_thread << "," << elapsed.count() << "," << CUTOFF << "\n";
 					outputFile.close(); // Fermer le fichier
 
 
