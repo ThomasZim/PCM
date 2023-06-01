@@ -29,7 +29,7 @@ ConcurrentReuseQueue<Path> paths;
 // std::mutex shortest_mutex;
 
 // Number of cities
-int cities;
+uint64_t cities;
 int i_thread;
 
 enum Verbosity {
@@ -46,12 +46,12 @@ static struct {
 	Verbosity verbose;
 	struct {
 		std::atomic<uint64_t> verified;	// # of paths checked
-		int found;	// # of times a shorter path was found
-		int* bound;	// # of bound operations per level
+		uint64_t found;	// # of times a shorter path was found
+		uint64_t* bound;	// # of bound operations per level
 	} counter;
-	int size;
+	uint64_t size;
 	uint64_t total;		// number of paths to check
-	int* fact;
+	uint64_t* fact;
 } global;
 
 static const struct {
@@ -268,8 +268,8 @@ void reset_counters(int size)
 	global.size = size;
 	global.counter.verified = 0;
 	global.counter.found = 0;
-	global.counter.bound = new int[global.size];
-	global.fact = new int[global.size];
+	global.counter.bound = new uint64_t[global.size];
+	global.fact = new uint64_t[global.size];
 	for (int i=0; i<global.size; i++) {
 		global.counter.bound[i] = 0;
 		if (i) {
